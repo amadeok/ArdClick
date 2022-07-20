@@ -29,6 +29,10 @@ arduino_start_conn =  30005
 arduino_start_conn_byte_code = arduino_start_conn.to_bytes(2, 'little', signed=False)
 reset_arduino =  30006
 reset_arduino_byte_code = mouse_move_code.to_bytes(2, 'little', signed=False)
+right_click =  30007
+right_click_byte_code = right_click.to_bytes(2, 'little', signed=False)
+change_delay_between =  30008
+change_delay_between_byte_code = change_delay_between.to_bytes(2, 'little', signed=False)
 
 class key:
     LEFT_GUI = (b'\x83'+b'\x00', "left_gui")
@@ -108,6 +112,12 @@ class ardclick:
                     print("arduino port not found")
                     sys.exit()
 
+    def change_delay_between(self, new_delay):
+        self.serial_write(change_delay_between)
+        self.serial_write(new_delay)
+        logging.info(f"new delay set to {new_delay}")
+
+        
 
     def serial_write2(self, bytes_):
         with mutexserial2:
@@ -134,6 +144,17 @@ class ardclick:
         with mutexserial:
             x = point[0]+ x_of 
             y = point[1]+ y_of
+            self.serial_write(x)
+            self.serial_write(y)
+
+
+    def write_mouse_coor_right(self, point, x_of = 0, y_of = 0):
+        logging.debug(f"{self.log} moving mouse and click {point}, {x_of}, {y_of}") 
+        with mutexserial:
+            x = point[0]+ x_of
+            y = point[1]+ y_of
+            self.serial_write2(right_click_byte_code)
+            self.serial_write2(right_click_byte_code)
             self.serial_write(x)
             self.serial_write(y)
 
@@ -186,7 +207,7 @@ class ardclick:
 # print(a.ard)
 # a.init()
 # print(a.ard)
-
+# a.change_delay_between(100)
 
 # a.mouse_move((1000 , 100))
 # a.write_mouse_coor((1000, 1000))
