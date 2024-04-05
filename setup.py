@@ -10,7 +10,7 @@ setup(
     author_email='shudson@anl.gov',
     license='BSD 2-clause',
     packages=['ArdClick'],
-    install_requires=['pyserial',                     
+    install_requires=['PySerial',                     
                       ],
 
     classifiers=[
