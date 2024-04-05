@@ -2,3 +2,5 @@ build/
 dist/
 ArdClick.egg-info/
 ArdClick.egg-info/PKG-INFO
+build/
+build/

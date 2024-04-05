@@ -157,6 +157,14 @@ class ardclick:
             self.serial_write2(right_click_byte_code)
             self.serial_write(x)
             self.serial_write(y)
+            
+    def write_custom(self, custom_code, values):
+        logging.debug(f"{self.log} sending custom command {custom_code}, {values}") 
+        with mutexserial:
+            self.serial_write(custom_code)
+            self.serial_write(custom_code)
+            for value in values:
+                self.serial_write(value)
 
     def mouse_move(self, point, x_of=0, y_of=0):
         logging.debug(f"{self.log} moving mouse {point}, {x_of}, {y_of}") 
