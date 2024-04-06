@@ -27,8 +27,9 @@ mouse_move_code =  30004
 mouse_move_byte_code = mouse_move_code.to_bytes(2, 'little', signed=False)
 arduino_start_conn =  30005
 arduino_start_conn_byte_code = arduino_start_conn.to_bytes(2, 'little', signed=False)
-reset_arduino =  30006
-reset_arduino_byte_code = mouse_move_code.to_bytes(2, 'little', signed=False)
+# reset_arduino =  30006
+# reset_arduino_byte_code = mouse_move_code.to_bytes(2, 'little', signed=False) 
+# reset can be done by opening and closing serial with baud 1200
 right_click =  30007
 right_click_byte_code = right_click.to_bytes(2, 'little', signed=False)
 change_delay_between =  30008
@@ -58,52 +59,97 @@ class ardclick:
         self.reset_arduino = reset_arduino
         self.log = ""
         self.key = key()
- 
+    
+    def empty_read_buffer(self):
+        count = 0
+        empty_read =  b''
+        n = 0
+        fail = False
+        while 1:
+            #if self.ard.in_waiting:
+            empty_read =  self.ard.read_all()
+            n+=1
+            if len(empty_read):
+                print(f"{count} TIMES: WARNING THERE WAS DATA IN THE BUFFER {len(empty_read)}")
+                count+=1
+                fail = True
+            elif n > 10: 
+                break
+            time.sleep(0.06)
+        return fail
+
     def init_arduino(self, ard_port):
-        self.ard = serial.Serial(port=ard_port, baudrate=115200, timeout=5)
-        logging.info(f"Found port {ard_port}")
         arduino_start_conn =  30005
-        reset_arduino =  30006
+        if self.ard and not self.ard.closed:
+            self.ard.close()
+        if self.reset_arduino: # reset can be done by opening and closing serial with baud 1200
 
-        if self.reset_arduino:
-            if self.serial_write(reset_arduino) == -1: raise Exception 
-            self.serial_write(reset_arduino)
-            self.ard.close()    
-            print("arduino connection sucess, it has been restarted, connecting to it again")
+            self.reboot_arduino(ard_port)
 
-            try_nb = 1
-            while try_nb < 20:
-                try:
-                    self.ard = serial.Serial(port=ard_port, baudrate=115200, timeout=1000)
-                    break
-                except:
-                    time.sleep(1)
-                    print("attempting try nb ", try_nb)
-                    try_nb+=1
-        
+        else:
+            self.ard = serial.Serial(port=ard_port, baudrate=115200, timeout=1000)
+            logging.info(f"Found port {ard_port}")
+
         print("arduino connection sucess")
 
         time.sleep(1)
+
+        # fail = self.empty_read_buffer()
+        # if fail:
+        self.start_conn_fun(arduino_start_conn)
+
+        print("sent resolution to arduino")
+
+    def start_conn_fun(self, arduino_start_conn):
+        print("sending arduino_start_conn code")
+
         self.serial_write(arduino_start_conn)
         self.serial_write(arduino_start_conn)
 
         screen_res = pyautogui.size()
+
+        print("sending w h")
         self.serial_write(screen_res.width)
         self.serial_write(screen_res.height)
-        print("sent resolution to arduino")
 
        # if args.ard_com > -1:
        #     n = args.ard_com
-    def init(self):
-        n = 2
 
+
+    def reboot_arduino(self, ard_port):
+        if self.ard and not self.ard.closed:
+            self.ard.close()
+        self.ard = serial.Serial(port=ard_port, baudrate=1200, timeout=5)
+        self.ard.close()
+        logging.info(f"Found port {ard_port}")
+        time.sleep(3)
+        # if self.serial_write(reset_arduino) == -1: raise Exception 
+        # self.serial_write(reset_arduino)
+        # self.ard.close()    
+        print("arduino connection sucess, it has been restarted, connecting to it again")
+
+        try_nb = 1
+        while try_nb < 20:
+            try:
+                self.ard = serial.Serial(port=ard_port, baudrate=115200, timeout=1000)
+                break
+            except:
+                time.sleep(1)
+                print("attempting try nb ", try_nb)
+                try_nb+=1
+        print("arduino rebooted")
+
+    def search_port(self, func):
+        n = 0
         while 1:
             try:
                 ard_port = f'COM{n}'
-                self.init_arduino(ard_port)
+                #self.init_arduino(ard_port)
+                func(ard_port)
                 break
             except Exception as e: 
-                if n < 10:
+                s = str(e)
+                if not "he system cannot find the file specified" in s:
                     print(e)
                 n+=1
             #print(e)
@@ -111,6 +157,14 @@ class ardclick:
                     logging.info("arduino port not found")
                     print("arduino port not found")
                     sys.exit()
+                    
+    def init(self):
+        self.search_port(self.init_arduino)
+
+    def reboot(self):
+        self.search_port(self.reboot_arduino)
+
+
 
     def change_delay_between(self, new_delay):
         self.serial_write(change_delay_between)
