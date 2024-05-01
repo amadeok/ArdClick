@@ -49,7 +49,7 @@ class key:
 
 
 class ardclick:
-    def __init__(self, reset_arduino=False):
+    def __init__(self, reset_arduino=False, port=None):
         self.find_fun_timeout = 15
         self.prev_time = time.time()
         self.screen_res = pyautogui.size()
@@ -59,6 +59,7 @@ class ardclick:
         self.reset_arduino = reset_arduino
         self.log = ""
         self.key = key()
+        self.port = port
     
     def empty_read_buffer(self):
         count = 0
@@ -83,9 +84,7 @@ class ardclick:
         if self.ard and not self.ard.closed:
             self.ard.close()
         if self.reset_arduino: # reset can be done by opening and closing serial with baud 1200
-
             self.reboot_arduino(ard_port)
-
         else:
             self.ard = serial.Serial(port=ard_port, baudrate=115200, timeout=1000)
             logging.info(f"Found port {ard_port}")
@@ -140,23 +139,27 @@ class ardclick:
         print("arduino rebooted")
 
     def search_port(self, func):
-        n = 0
-        while 1:
-            try:
-                ard_port = f'COM{n}'
-                #self.init_arduino(ard_port)
-                func(ard_port)
-                break
-            except Exception as e: 
-                s = str(e)
-                if not "he system cannot find the file specified" in s:
-                    print(e)
-                n+=1
-            #print(e)
-                if n == 100:
-                    logging.info("arduino port not found")
-                    print("arduino port not found")
-                    sys.exit()
+        n = 2
+        if not self.port:
+            while 1:
+                try:
+                    ard_port = f'COM{n}'
+                    #self.init_arduino(ard_port)
+                    func(ard_port)
+                    break
+                except Exception as e: 
+                    s = str(e)
+                    if not "he system cannot find the file specified" in s:
+                        print(e)
+                    n+=1
+                #print(e)
+                    if n == 100:
+                        logging.info("arduino port not found")
+                        print("arduino port not found")
+                        sys.exit()
+        else:
+            func(self.port)
+            
                     
     def init(self):
         self.search_port(self.init_arduino)
