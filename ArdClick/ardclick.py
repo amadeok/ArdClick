@@ -109,7 +109,7 @@ class ardclick:
 
         screen_res = pyautogui.size()
 
-        logging.info("sending w h", screen_res)
+        logging.info(f"sending w h {screen_res}"  )
         self.serial_write(screen_res.width)
         self.serial_write(screen_res.height)
 
@@ -136,7 +136,7 @@ class ardclick:
                 break
             except:
                 time.sleep(1)
-                logging.info("attempting try nb ", try_nb)
+                logging.info(f"attempting try nb {try_nb}")
                 try_nb+=1
         logging.info("arduino rebooted")
 
