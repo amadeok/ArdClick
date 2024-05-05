@@ -32,6 +32,8 @@ arduino_start_conn_byte_code = arduino_start_conn.to_bytes(2, 'little', signed=F
 # reset can be done by opening and closing serial with baud 1200
 right_click =  30007
 right_click_byte_code = right_click.to_bytes(2, 'little', signed=False)
+left_click =  30009
+left_click_byte_code = left_click.to_bytes(2, 'little', signed=False)
 change_delay_between =  30008
 change_delay_between_byte_code = change_delay_between.to_bytes(2, 'little', signed=False)
 
@@ -71,7 +73,7 @@ class ardclick:
             empty_read =  self.ard.read_all()
             n+=1
             if len(empty_read):
-                print(f"{count} TIMES: WARNING THERE WAS DATA IN THE BUFFER {len(empty_read)}")
+                logging.info(f"{count} TIMES: WARNING THERE WAS DATA IN THE BUFFER {len(empty_read)}")
                 count+=1
                 fail = True
             elif n > 10: 
@@ -89,7 +91,7 @@ class ardclick:
             self.ard = serial.Serial(port=ard_port, baudrate=115200, timeout=1000)
             logging.info(f"Found port {ard_port}")
 
-        print("arduino connection sucess")
+        logging.info("arduino connection sucess")
 
         time.sleep(1)
 
@@ -97,17 +99,17 @@ class ardclick:
         # if fail:
         self.start_conn_fun(arduino_start_conn)
 
-        print("sent resolution to arduino")
+        logging.info("sent resolution to arduino")
 
     def start_conn_fun(self, arduino_start_conn):
-        print("sending arduino_start_conn code")
+        logging.info("sending arduino_start_conn code")
 
         self.serial_write(arduino_start_conn)
         self.serial_write(arduino_start_conn)
 
         screen_res = pyautogui.size()
 
-        print("sending w h")
+        logging.info("sending w h", screen_res)
         self.serial_write(screen_res.width)
         self.serial_write(screen_res.height)
 
@@ -125,7 +127,7 @@ class ardclick:
         # if self.serial_write(reset_arduino) == -1: raise Exception 
         # self.serial_write(reset_arduino)
         # self.ard.close()    
-        print("arduino connection sucess, it has been restarted, connecting to it again")
+        logging.info("arduino connection sucess, it has been restarted, connecting to it again")
 
         try_nb = 1
         while try_nb < 20:
@@ -134,9 +136,9 @@ class ardclick:
                 break
             except:
                 time.sleep(1)
-                print("attempting try nb ", try_nb)
+                logging.info("attempting try nb ", try_nb)
                 try_nb+=1
-        print("arduino rebooted")
+        logging.info("arduino rebooted")
 
     def search_port(self, func):
         n = 2
@@ -150,12 +152,12 @@ class ardclick:
                 except Exception as e: 
                     s = str(e)
                     if not "he system cannot find the file specified" in s:
-                        print(e)
+                        logging.info(e)
                     n+=1
-                #print(e)
+                #logging.info(e)
                     if n == 100:
                         logging.info("arduino port not found")
-                        print("arduino port not found")
+                        logging.info("arduino port not found")
                         sys.exit()
         else:
             func(self.port)
@@ -204,9 +206,20 @@ class ardclick:
             self.serial_write(x)
             self.serial_write(y)
 
+    def write_mouse_coor_new(self, point, x_of=0, y_of=0):
+        logging.debug(f"{self.log} moving mouse and left click {point}, {x_of}, {y_of}") 
+        with mutexserial:
+            x = point[0]+ x_of
+            y = point[1]+ y_of
+            self.serial_write2(left_click_byte_code)
+            self.serial_write2(left_click_byte_code)
+            self.serial_write(x)
+            self.serial_write(y)
+            ret = self.ard.read(1)
+            assert(ret == b'c')
 
     def write_mouse_coor_right(self, point, x_of = 0, y_of = 0):
-        logging.debug(f"{self.log} moving mouse and click {point}, {x_of}, {y_of}") 
+        logging.debug(f"{self.log} moving mouse and right click {point}, {x_of}, {y_of}") 
         with mutexserial:
             x = point[0]+ x_of
             y = point[1]+ y_of
