@@ -36,6 +36,17 @@ left_click =  30009
 left_click_byte_code = left_click.to_bytes(2, 'little', signed=False)
 change_delay_between =  30008
 change_delay_between_byte_code = change_delay_between.to_bytes(2, 'little', signed=False)
+setBoardMode = 40009
+
+           
+press_left_click  =40013
+release_left_click = 40014
+press_right_click=40015
+release_right_click=40016
+press_key_only= 40017
+release_key_only = 40018
+
+from enum import Enum
 
 class key:
     LEFT_GUI = (b'\x83'+b'\x00', "left_gui")
@@ -48,9 +59,13 @@ class key:
     m = (b'\x6D'+b'\x00', "m")
     i =(b'\x69'+b'\x00', "i")
     CAPS_LOCK =(b'\xC1'+b'\x00', "caps lock key")
+    SPACE = ( b'\x20' + b'\x00', "space")
 
 
 class ardclick:
+    class boardModeEnum(Enum):
+        standard = 0
+        mouseKeyboard = 1
     def __init__(self, reset_arduino=False, port=None):
         self.find_fun_timeout = 15
         self.prev_time = time.time()
@@ -109,7 +124,7 @@ class ardclick:
 
         screen_res = pyautogui.size()
 
-        logging.info(f"sending w h {screen_res}"  )
+        logging.info(f"sending w h {screen_res}"  )                                
         self.serial_write(screen_res.width)
         self.serial_write(screen_res.height)
 
@@ -235,6 +250,24 @@ class ardclick:
             self.serial_write(custom_code)
             for value in values:
                 self.serial_write(value)
+                
+    def left_click_only(self, x, y):
+        self.write_custom(press_left_click, [x, y])
+        
+    def left_release_only(self, x, y):
+        self.write_custom(release_left_click, [x, y])
+        
+    def right_click_only(self, x, y):
+        self.write_custom(press_right_click, [x, y])
+        
+    def right_release_only(self, x, y):
+        self.write_custom(release_right_click, [x, y]) 
+        
+    def press_key_only(self, key):
+        self.write_custom(press_key_only, [ int.from_bytes(key[0], byteorder='little')  ])
+    
+    def release_key_only(self, key):
+        self.write_custom(release_key_only, [int.from_bytes(key[0], byteorder='little') ])          
 
     def mouse_move(self, point, x_of=0, y_of=0):
         logging.debug(f"{self.log} moving mouse {point}, {x_of}, {y_of}") 
@@ -280,16 +313,42 @@ class ardclick:
             
             self.serial_write2(key[0])
             time.sleep(0.1)
+            
+    def set_board_mode(self, val):
+        self.write_custom(setBoardMode, [val])
+        
+if __name__ == "__main__":
 
-# a = ardclick()
-# print(a.ard)
-# a.init()
-# print(a.ard)
-# a.change_delay_between(100)
+    a = ardclick(reset_arduino=1, port="COM7")
+    print(a.ard)
+    a.init()
+    print(a.ard)
+    a.change_delay_between(100)
+    
+    a.set_board_mode(a.boardModeEnum.mouseKeyboard.value)
+    # a.change_delay_between(50) #250ms for click
+    
+    # a.mouse_move((2000 , 2000))
+    a.write_mouse_coor_new((1000, 1000))
 
-# a.mouse_move((1000 , 100))
-# a.write_mouse_coor((1000, 1000))
+    # a.write_string("hello", False)
 
-# a.write_string("hello", False)
+    #                 a.press_key(key.m)
+    
+    for x in range(1000):
+        pos = pyautogui.position()
+        a.left_click_only(pos.x, pos.y)
+        a.press_key_only(key.SPACE)
+        print(x)
+        time.sleep(1)        
+        pos = pyautogui.position()
+        a.left_release_only(pos.x, pos.y)
+        a.release_key_only(key.SPACE)                 
+        time.sleep(1)
 
-# a.press_key(key.m)
+
+
+
+                                                   
+                 
+
