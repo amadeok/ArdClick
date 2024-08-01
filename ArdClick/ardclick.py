@@ -1,4 +1,5 @@
-import os, sys, time, argparse, serial, pyautogui, threading
+import math
+import os, sys, time, argparse, serial, pyautogui, threading, random
 import logging
 from PIL import Image
 
@@ -61,6 +62,10 @@ class key:
     CAPS_LOCK =(b'\xC1'+b'\x00', "caps lock key")
     SPACE = ( b'\x20' + b'\x00', "space")
 
+def map_number(num, from_min, from_max, to_min, to_max):
+    normalized_num = (num - from_min) / (from_max - from_min)
+    mapped_num = normalized_num * (to_max - to_min) + to_min
+    return mapped_num
 
 class ardclick:
     class boardModeEnum(Enum):
@@ -316,6 +321,43 @@ class ardclick:
             
     def set_board_mode(self, val):
         self.write_custom(setBoardMode, [val])
+        
+    def move_mouse_s(self, target, x_of=0, y_of= 0, start=None, duration=None, randomness=10, recursive=True, end_randomness=1):
+        def apply_randomness(integer, randomness):
+            min_value = integer - randomness
+            max_value = integer + randomness
+            return random.randint(min_value, max_value)
+        
+        start_x, start_y = start if start else pyautogui.position()
+        if len(target) > 2: target = target[0:2]
+        end_x, end_y = [apply_randomness(int(e), end_randomness) for e in target]
+        end_x += int(x_of)
+        end_y += int(y_of)
+        if duration == None:
+            dis =  math.sqrt((start_x - end_x)**2 + (start_y - end_y)**2)
+            duration = map_number(dis, 0, 2202,  0, 0.65)
+
+        num_steps = max(1,  int(duration * 100))
+        step_x = (end_x - start_x) / num_steps
+        step_y = (end_y - start_y) / num_steps
+        #pyautogui.mouseDown()
+        for i in range(num_steps):
+            perc = (((num_steps-i))/num_steps) *2
+            randomness_ =  randomness*min(perc, 1) 
+            x = start_x + step_x * i + random.uniform(-randomness_, randomness_)
+            y = start_y + step_y * i + random.uniform(-randomness_, randomness_)
+            #pyautogui.moveTo(x, y)
+            #logging.info(randomness,randomness_, perc)
+            self.mouse_move((int(x), int(y)))
+            #time.sleep(duration / num_steps)
+        #if recursive: #self.move_mouse(pos.x, pos.y, end_x, end_y, 0.2, 0, False)
+        for x in range(2):
+            self.mouse_move((end_x, end_y))
+            pos = pyautogui.position()
+            logging.info(pos)
+        #logging.info(f"dur {duration} steps {num_steps}")
+        self.write_mouse_coor_new((end_x, end_y))
+        #pyautogui.mouseUp()      
         
 if __name__ == "__main__":
 
