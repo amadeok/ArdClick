@@ -59,8 +59,14 @@ class key:
     TAB = (b'\xB3'+b'\x00', "tab")
     m = (b'\x6D'+b'\x00', "m")
     i =(b'\x69'+b'\x00', "i")
+    r = (b'\x72'+b'\x00', "r")
+    two = (b'\x32'+b'\x00', "two")
+
     CAPS_LOCK =(b'\xC1'+b'\x00', "caps lock key")
     SPACE = ( b'\x20' + b'\x00', "space")
+    F5 = (b'\xC6' + b'\x00',	"F5")
+    F1 = (b'\xC2' + b'\x00',	"F1")
+
 
 def map_number(num, from_min, from_max, to_min, to_max):
     normalized_num = (num - from_min) / (from_max - from_min)
@@ -247,6 +253,8 @@ class ardclick:
             self.serial_write2(right_click_byte_code)
             self.serial_write(x)
             self.serial_write(y)
+            ret = self.ard.read(1)
+            assert(ret == b'c')
             
     def write_custom(self, custom_code, values):
         logging.debug(f"{self.log} sending custom command {custom_code}, {values}") 
@@ -272,7 +280,13 @@ class ardclick:
         self.write_custom(press_key_only, [ int.from_bytes(key[0], byteorder='little')  ])
     
     def release_key_only(self, key):
-        self.write_custom(release_key_only, [int.from_bytes(key[0], byteorder='little') ])          
+        self.write_custom(release_key_only, [int.from_bytes(key[0], byteorder='little') ])     
+    
+    def press_key_2(self, key, int=None):
+        self.press_key_only(key)
+        int_ = int if int else random.uniform(0.4, 0.7)
+        time.sleep(int_)
+        self.release_key_only(key)
 
     def mouse_move(self, point, x_of=0, y_of=0):
         logging.debug(f"{self.log} moving mouse {point}, {x_of}, {y_of}") 
@@ -322,7 +336,7 @@ class ardclick:
     def set_board_mode(self, val):
         self.write_custom(setBoardMode, [val])
         
-    def move_mouse_s(self, target, x_of=0, y_of= 0, start=None, duration=None, randomness=10, recursive=True, end_randomness=1):
+    def move_mouse_s(self, target, x_of=0, y_of= 0, start=None, duration=None, randomness=10, recursive=True, end_randomness=1, right_click=False):
         def apply_randomness(integer, randomness):
             min_value = integer - randomness
             max_value = integer + randomness
@@ -356,7 +370,10 @@ class ardclick:
             pos = pyautogui.position()
             logging.info(pos)
         #logging.info(f"dur {duration} steps {num_steps}")
-        self.write_mouse_coor_new((end_x, end_y))
+        if not right_click:
+            self.write_mouse_coor_new((end_x, end_y))
+        else:
+            self.write_mouse_coor_right((end_x, end_y))
         #pyautogui.mouseUp()      
         
 if __name__ == "__main__":
