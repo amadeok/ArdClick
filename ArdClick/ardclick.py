@@ -50,6 +50,7 @@ release_key_only = 40018
 from enum import Enum
 
 class key:
+    LEFT_ALT = (b'\x82'+b'\x00', "left_alt")
     LEFT_GUI = (b'\x83'+b'\x00', "left_gui")
     RIGHT_GUI = (b'\x87'+b'\x00', "right_gui")
     ESC = (b'\xB1'+b'\x00', "esc")
@@ -60,6 +61,9 @@ class key:
     m = (b'\x6D'+b'\x00', "m")
     i =(b'\x69'+b'\x00', "i")
     r = (b'\x72'+b'\x00', "r")
+    t = (b'\x74'+b'\x00', "t")
+    e = (b'\x65'+b'\x00', "e") 
+    o = (b'\x6f'+b'\x00', "o") 
     two = (b'\x32'+b'\x00', "two")
 
     CAPS_LOCK =(b'\xC1'+b'\x00', "caps lock key")
@@ -67,6 +71,7 @@ class key:
     F5 = (b'\xC6' + b'\x00',	"F5")
     F1 = (b'\xC2' + b'\x00',	"F1")
 
+    LWIN = (b'\x83' + b'\x00',	"LWIN")
 
 def map_number(num, from_min, from_max, to_min, to_max):
     normalized_num = (num - from_min) / (from_max - from_min)
@@ -195,7 +200,12 @@ class ardclick:
     def reboot(self):
         self.search_port(self.reboot_arduino)
 
-
+    def deinit(self):
+        self.ard.close()
+        if self.ard.closed:
+            logging.info("Connection is still open")
+        else:
+            logging.info("Connection closed")
 
     def change_delay_between(self, new_delay):
         self.serial_write(change_delay_between)
@@ -288,8 +298,9 @@ class ardclick:
         time.sleep(int_)
         self.release_key_only(key)
 
-    def mouse_move(self, point, x_of=0, y_of=0):
-        logging.debug(f"{self.log} moving mouse {point}, {x_of}, {y_of}") 
+    def mouse_move(self, point, x_of=0, y_of=0, print=1):
+        if print:
+            logging.debug(f"{self.log} moving mouse {point}, {x_of}, {y_of}") 
         with mutexserial:
             x = point[0]+ x_of
             y = point[1]+ y_of
@@ -336,7 +347,7 @@ class ardclick:
     def set_board_mode(self, val):
         self.write_custom(setBoardMode, [val])
         
-    def move_mouse_s(self, target, x_of=0, y_of= 0, start=None, duration=None, randomness=10, recursive=True, end_randomness=1, right_click=False):
+    def move_mouse_s(self, target, x_of=0, y_of= 0, start=None, duration=None, randomness=10, recursive=True, end_randomness=1, right_click=False, no_click=False):
         def apply_randomness(integer, randomness):
             min_value = integer - randomness
             max_value = integer + randomness
@@ -362,7 +373,7 @@ class ardclick:
             y = start_y + step_y * i + random.uniform(-randomness_, randomness_)
             #pyautogui.moveTo(x, y)
             #logging.info(randomness,randomness_, perc)
-            self.mouse_move((int(x), int(y)))
+            self.mouse_move((int(x), int(y)), print=False)
             #time.sleep(duration / num_steps)
         #if recursive: #self.move_mouse(pos.x, pos.y, end_x, end_y, 0.2, 0, False)
         for x in range(2):
@@ -370,10 +381,11 @@ class ardclick:
             pos = pyautogui.position()
             logging.info(pos)
         #logging.info(f"dur {duration} steps {num_steps}")
-        if not right_click:
-            self.write_mouse_coor_new((end_x, end_y))
-        else:
-            self.write_mouse_coor_right((end_x, end_y))
+        if not no_click:
+            if not right_click:
+                self.write_mouse_coor_new((end_x, end_y))
+            else:
+                self.write_mouse_coor_right((end_x, end_y))
         #pyautogui.mouseUp()      
         
 if __name__ == "__main__":
