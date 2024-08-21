@@ -64,6 +64,10 @@ class key:
     t = (b'\x74'+b'\x00', "t")
     e = (b'\x65'+b'\x00', "e") 
     o = (b'\x6f'+b'\x00', "o") 
+    p = (b'\x70'+b'\x00', "p") 
+    a = (b'\x61'+b'\x00', "a") 
+    d = (b'\x64'+b'\x00', "d") 
+
     two = (b'\x32'+b'\x00', "two")
 
     CAPS_LOCK =(b'\xC1'+b'\x00', "caps lock key")
