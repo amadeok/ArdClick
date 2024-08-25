@@ -384,7 +384,7 @@ class ardclick:
             y = start_y + step_y * i + random.uniform(-randomness_, randomness_)
             #pyautogui.moveTo(x, y)
             #logging.info(randomness,randomness_, perc)
-            self.mouse_move((int(x), int(y)), print=False)
+            self.mouse_move([max(0,int(x)), max(0,int(y))], print=False)
             #time.sleep(duration / num_steps)
         #if recursive: #self.move_mouse(pos.x, pos.y, end_x, end_y, 0.2, 0, False)
         for x in range(2):
