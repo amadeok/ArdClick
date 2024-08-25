@@ -70,6 +70,11 @@ class key:
     w = (b'\x77'+b'\x00', "w") 
     s = (b'\x73'+b'\x00', "s") 
 
+    two = (b'\x32'+b'\x00', "2") 
+    eight = (b'\x38'+b'\x00', "8") 
+    nine = (b'\x39'+b'\x00', "9") 
+    zero = (b'\x30'+b'\x00', "0") 
+
     two = (b'\x32'+b'\x00', "two")
 
     CAPS_LOCK =(b'\xC1'+b'\x00', "caps lock key")
