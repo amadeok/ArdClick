@@ -58,6 +58,7 @@ class key:
     HOME = (b'\xD2'+b'\x00', "home")
     LEFT_CTRL = (b'\x80'+b'\x00', "left_ctrl")
     TAB = (b'\xB3'+b'\x00', "tab")
+    SHIFT = (b'\x81'+b'\x00', "shift")
     m = (b'\x6D'+b'\x00', "m")
     i =(b'\x69'+b'\x00', "i")
     r = (b'\x72'+b'\x00', "r")
@@ -69,6 +70,7 @@ class key:
     d = (b'\x64'+b'\x00', "d") 
     w = (b'\x77'+b'\x00', "w") 
     s = (b'\x73'+b'\x00', "s") 
+    c = (b'\x63'+b'\x00', "c") 
 
     two = (b'\x32'+b'\x00', "2") 
     eight = (b'\x38'+b'\x00', "8") 
