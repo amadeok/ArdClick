@@ -73,6 +73,7 @@ class key:
     c = (b'\x63'+b'\x00', "c") 
 
     two = (b'\x32'+b'\x00', "2") 
+    seven = (b'\x37'+b'\x00', "7") 
     eight = (b'\x38'+b'\x00', "8") 
     nine = (b'\x39'+b'\x00', "9") 
     zero = (b'\x30'+b'\x00', "0") 
