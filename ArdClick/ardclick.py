@@ -286,7 +286,7 @@ class ardclick:
             assert(ret == b'c')
             
     def write_custom(self, custom_code, values):
-        logging.debug(f"{self.log} sending custom command {custom_code}, {values}") 
+        #logging.debug(f"{self.log} sending custom command {custom_code}, {values}") 
         with mutexserial:
             self.serial_write(custom_code)
             self.serial_write(custom_code)
