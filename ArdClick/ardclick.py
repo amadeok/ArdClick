@@ -2,6 +2,7 @@ import math
 import os, sys, time, argparse, serial, pyautogui, threading, random
 import logging
 from PIL import Image
+import pytweening
 
 
 pil_logger = logging.getLogger('PIL')
@@ -28,9 +29,9 @@ mouse_move_code =  30004
 mouse_move_byte_code = mouse_move_code.to_bytes(2, 'little', signed=False)
 arduino_start_conn =  30005
 arduino_start_conn_byte_code = arduino_start_conn.to_bytes(2, 'little', signed=False)
-# reset_arduino =  30006
-# reset_arduino_byte_code = mouse_move_code.to_bytes(2, 'little', signed=False) 
-# reset can be done by opening and closing serial with baud 1200
+reset_arduino =  30006
+reset_arduino_byte_code = reset_arduino.to_bytes(2, 'little', signed=False) 
+#reset can be done by opening and closing serial with baud 1200
 right_click =  30007
 right_click_byte_code = right_click.to_bytes(2, 'little', signed=False)
 left_click =  30009
@@ -102,7 +103,7 @@ class ardclick:
     class boardModeEnum(Enum):
         standard = 0
         mouseKeyboard = 1
-    def __init__(self, reset_arduino=False, port=None):
+    def __init__(self, reset_arduino=False, port=None, baudrate=115200):
         self.find_fun_timeout = 15
         self.prev_time = time.time()
         self.screen_res = pyautogui.size()
@@ -113,6 +114,7 @@ class ardclick:
         self.log = ""
         self.key = key()
         self.port = port
+        self.baudrate = baudrate
     
     def empty_read_buffer(self):
         count = 0
@@ -139,7 +141,7 @@ class ardclick:
         if self.reset_arduino: # reset can be done by opening and closing serial with baud 1200
             self.reboot_arduino(ard_port)
         else:
-            self.ard = serial.Serial(port=ard_port, baudrate=115200, timeout=1000)
+            self.ard = serial.Serial(port=ard_port, baudrate=self.baudrate, timeout=1000)
             logging.info(f"Found port {ard_port}")
 
         logging.info("arduino connection sucess")
@@ -171,21 +173,35 @@ class ardclick:
     def reboot_arduino(self, ard_port):
         if self.ard and not self.ard.closed:
             self.ard.close()
-        self.ard = serial.Serial(port=ard_port, baudrate=1200, timeout=5)
-        self.ard.close()
-        logging.info(f"Found port {ard_port}")
-        time.sleep(3)
-        # if self.serial_write(reset_arduino) == -1: raise Exception 
-        # self.serial_write(reset_arduino)
-        # self.ard.close()    
-        logging.info("arduino connection sucess, it has been restarted, connecting to it again")
+        if 0:
+            self.ard = serial.Serial(port=ard_port, baudrate=1200, timeout=5)
+            self.ard.close()
+            logging.info(f"Found port {ard_port}")
+            time.sleep(3)
+            # if self.serial_write(reset_arduino) == -1: raise Exception 
+            # self.serial_write(reset_arduino)
+            # self.ard.close()    
+            logging.info("arduino connection sucess, it has been restarted, connecting to it again")
+        else:
+            self.ard = serial.Serial(port=ard_port, baudrate=9600, timeout=1000)
+            logging.info(f"Found port {ard_port}")
+
+            #self.serial_write(reset_arduino)
+            for x in range(3):
+                self.serial_write2(reset_arduino_byte_code)
+            time.sleep(0.1)
+            self.ard.close()
+            #self.ard.flush()
+            time.sleep(.5)
+            
+            #self.serial_write(reset_arduino)
 
         try_nb = 1
         while try_nb < 20:
             try:
-                self.ard = serial.Serial(port=ard_port, baudrate=115200, timeout=1000)
+                self.ard = serial.Serial(port=ard_port, baudrate=self.baudrate, timeout=1000)
                 break
-            except:
+            except Exception as e:
                 time.sleep(1)
                 logging.info(f"attempting try nb {try_nb}")
                 try_nb+=1
@@ -195,6 +211,9 @@ class ardclick:
         n = 2
         if not self.port:
             while 1:
+                if n == 5: 
+                    n+=1
+                    continue
                 try:
                     ard_port = f'COM{n}'
                     #self.init_arduino(ard_port)
@@ -367,35 +386,58 @@ class ardclick:
     def set_board_mode(self, val):
         self.write_custom(setBoardMode, [val])
         
-    def move_mouse_s(self, target, x_of=0, y_of= 0, start=None, duration=None, randomness=10, recursive=True, end_randomness=1, right_click=False, no_click=False):
+        
+    def ease_in_out_quad(self, t):
+        if t < 0.5:
+            return 2 * t * t
+        else:
+            return 1 - math.pow(-2 * t + 2, 2) / 2
+
+    def map_number(self, value, from_min, from_max, to_min, to_max):
+        return (value - from_min) / (from_max - from_min) * (to_max - to_min) + to_min
+
+    def move_mouse_s(self, target, x_of=0, y_of=0, start=None, duration=None, randomness=10,
+                    recursive=True, end_randomness=1, right_click=False, no_click=False, random_sleep=0, ease_func=lambda v:v ):
+        
         def apply_randomness(integer, randomness):
-            min_value = integer - randomness
-            max_value = integer + randomness
-            return random.randint(min_value, max_value)
+            return random.randint(integer - randomness, integer + randomness)
         
         start_x, start_y = start if start else pyautogui.position()
-        if len(target) > 2: target = target[0:2]
+        if len(target) > 2:
+            target = target[:2]
         end_x, end_y = [apply_randomness(int(e), end_randomness) for e in target]
         end_x += int(x_of)
         end_y += int(y_of)
-        if duration == None:
-            dis =  math.sqrt((start_x - end_x)**2 + (start_y - end_y)**2)
-            duration = map_number(dis, 0, 2202,  0, 0.65)
 
-        num_steps = max(1,  int(duration * 100))
-        step_x = (end_x - start_x) / num_steps
-        step_y = (end_y - start_y) / num_steps
-        #pyautogui.mouseDown()
-        for i in range(num_steps):
-            perc = (((num_steps-i))/num_steps) *2
-            randomness_ =  randomness*min(perc, 1) 
-            x = start_x + step_x * i + random.uniform(-randomness_, randomness_)
-            y = start_y + step_y * i + random.uniform(-randomness_, randomness_)
-            #pyautogui.moveTo(x, y)
-            #logging.info(randomness,randomness_, perc)
-            self.mouse_move([max(0,int(x)), max(0,int(y))], print=False)
-            #time.sleep(duration / num_steps)
-        #if recursive: #self.move_mouse(pos.x, pos.y, end_x, end_y, 0.2, 0, False)
+        # Auto-calculate duration
+        if duration is None:
+            distance = math.hypot(end_x - start_x, end_y - start_y)
+            duration = self.map_number(distance, 0, 2202, 0.15, 0.65)
+
+        num_steps = max(1, int(duration * 100))
+        
+        ease_func_ =  getattr(pytweening, ease_func) if type(ease_func) == str else ease_func
+        
+        for i in range(num_steps + 1):
+            t = i / num_steps  # t ∈ [0, 1]
+            
+            eased_t = ease_func_(t)  # <-- Using pytweening!
+
+            # Interpolated position with easing
+            x = start_x + (end_x - start_x) * eased_t
+            y = start_y + (end_y - start_y) * eased_t
+
+            # Reduce randomness as we approach the target
+            current_randomness = randomness * (1.0 - t)
+            x += random.uniform(-current_randomness, current_randomness)
+            y += random.uniform(-current_randomness, current_randomness)
+
+            # Optional micro-pause
+            if random_sleep and random.randrange(100) < random_sleep:
+                time.sleep(random.uniform(0.01, 0.04))
+
+            self.mouse_move([max(0, int(x)), max(0, int(y))], print=False)
+            
         for x in range(2):
             self.mouse_move((end_x, end_y))
             pos = pyautogui.position()
@@ -406,7 +448,20 @@ class ardclick:
                 self.write_mouse_coor_new((end_x, end_y))
             else:
                 self.write_mouse_coor_right((end_x, end_y))
-        #pyautogui.mouseUp()      
+            
+    def move_mouse_s_old(self, target, x_of=0, y_of= 0, start=None, duration=None, randomness=10,
+                     recursive=True, end_randomness=1, right_click=False, no_click=False, random_sleep=0):
+
+        for i in range(num_steps):
+            perc = (((num_steps-i))/num_steps) *2
+            randomness_ =  randomness*min(perc, 1) 
+            x = start_x + step_x * i + random.uniform(-randomness_, randomness_)
+            y = start_y + step_y * i + random.uniform(-randomness_, randomness_)
+            if random_sleep and random.randrange(0, 100) < random_sleep:
+                time.sleep(random.uniform(0.01, 0.04))
+            self.mouse_move([max(0,int(x)), max(0,int(y))], print=False)
+
+
         
 if __name__ == "__main__":
 
