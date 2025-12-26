@@ -6,3 +6,4 @@ build/
 build/
 ArdClick.egg-info/
 *.pyc
+/ArdClick.egg-info

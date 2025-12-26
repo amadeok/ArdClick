@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools >= 61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ArdClick"
+version = "0.1.0"
+description = "A sample project"
+readme = "README.md"
+authors = [{ name = "Your Name", email = "you@example.com" }]
+license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]   
+requires-python = ">=3.8"
+dependencies = ["PySerial"]
+
+
+
+[tool.setuptools.packages.find]
+where = ["src"]    # Tells setuptools to look in ./src for packages
+namespaces = false
+
+[tool.setuptools.package-dir]
+"" = "src"         # Root package lives in ./src

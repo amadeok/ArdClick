@@ -103,7 +103,7 @@ class ardclick:
     class boardModeEnum(Enum):
         standard = 0
         mouseKeyboard = 1
-    def __init__(self, reset_arduino=False, port=None, baudrate=115200):
+    def __init__(self, reset_arduino=False, port=None, baudrate=115200, sl_int=(0.4, 0.7)):
         self.find_fun_timeout = 15
         self.prev_time = time.time()
         self.screen_res = pyautogui.size()
@@ -115,6 +115,7 @@ class ardclick:
         self.key = key()
         self.port = port
         self.baudrate = baudrate
+        self.sl_int = sl_int
     
     def empty_read_buffer(self):
         count = 0
@@ -333,8 +334,11 @@ class ardclick:
     
     def press_key_2(self, key, int=None):
         self.press_key_only(key)
-        int_ = int if int else random.uniform(0.4, 0.7)
-        time.sleep(int_)
+        if int:
+            lsp = int if isinstance(int, float) else random.uniform(*int)
+        else:
+            lsp = random.uniform(*self.sl_int)
+        time.sleep(lsp)
         self.release_key_only(key)
 
     def mouse_move(self, point, x_of=0, y_of=0, print=1):
