@@ -5,17 +5,36 @@ from PIL import Image
 import pytweening
 
 
+import logging
+
+# Get the PIL logger
 pil_logger = logging.getLogger('PIL')
 pil_logger.setLevel(logging.DEBUG)
-log_to_file = False
+
+pil_logger.propagate = True
+
+log_to_file = False  # Change to True if you want file logging
 
 if log_to_file:
-    logging.basicConfig(filename='app.log', filemode='w', format='%(asctime)s - %(message)s', level=level)
-else: 
-    logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.DEBUG)
-    
+    handler = logging.FileHandler('app.log', mode='w')
+else:
+    handler = logging.StreamHandler()  # Console
+
+handler.setLevel(logging.DEBUG)  # Allow DEBUG messages through the handler
+handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)  # Ensure root accepts DEBUG
+
+for h in logger.handlers[:]:
+    logger.removeHandler(h)
+
+logger.addHandler(handler)
+
 mutexserial = threading.Lock()
 mutexserial2 = threading.Lock()
+# Optional: also reduce noise from other loggers if needed
+# logging.getLogger('some.noisy.lib').setLevel(logging.WARNING)
 
 write_string_code = 30001
 write_string_byte_code = write_string_code.to_bytes(2, 'little', signed=False)
@@ -127,7 +146,7 @@ class ardclick:
             empty_read =  self.ard.read_all()
             n+=1
             if len(empty_read):
-                logging.info(f"{count} TIMES: WARNING THERE WAS DATA IN THE BUFFER {len(empty_read)}")
+                logger.info(f"{count} TIMES: WARNING THERE WAS DATA IN THE BUFFER {len(empty_read)}")
                 count+=1
                 fail = True
             elif n > 10: 
@@ -143,9 +162,9 @@ class ardclick:
             self.reboot_arduino(ard_port)
         else:
             self.ard = serial.Serial(port=ard_port, baudrate=self.baudrate, timeout=1000)
-            logging.info(f"Found port {ard_port}")
+            logger.info(f"Found port {ard_port}")
 
-        logging.info("arduino connection sucess")
+        logger.info("arduino connection sucess")
 
         time.sleep(1)
 
@@ -153,17 +172,17 @@ class ardclick:
         # if fail:
         self.start_conn_fun(arduino_start_conn)
 
-        logging.info("sent resolution to arduino")
+        logger.info("sent resolution to arduino")
 
     def start_conn_fun(self, arduino_start_conn):
-        logging.info("sending arduino_start_conn code")
+        logger.info("sending arduino_start_conn code")
 
         self.serial_write(arduino_start_conn)
         self.serial_write(arduino_start_conn)
 
         screen_res = pyautogui.size()
 
-        logging.info(f"sending w h {screen_res}"  )                                
+        logger.info(f"sending w h {screen_res}"  )                                
         self.serial_write(screen_res.width)
         self.serial_write(screen_res.height)
 
@@ -177,15 +196,15 @@ class ardclick:
         if 0:
             self.ard = serial.Serial(port=ard_port, baudrate=1200, timeout=5)
             self.ard.close()
-            logging.info(f"Found port {ard_port}")
+            logger.info(f"Found port {ard_port}")
             time.sleep(3)
             # if self.serial_write(reset_arduino) == -1: raise Exception 
             # self.serial_write(reset_arduino)
             # self.ard.close()    
-            logging.info("arduino connection sucess, it has been restarted, connecting to it again")
+            logger.info("arduino connection sucess, it has been restarted, connecting to it again")
         else:
             self.ard = serial.Serial(port=ard_port, baudrate=9600, timeout=1000)
-            logging.info(f"Found port {ard_port}")
+            logger.info(f"Found port {ard_port}")
 
             #self.serial_write(reset_arduino)
             for x in range(3):
@@ -204,9 +223,9 @@ class ardclick:
                 break
             except Exception as e:
                 time.sleep(1)
-                logging.info(f"attempting try nb {try_nb}")
+                logger.info(f"attempting try nb {try_nb}")
                 try_nb+=1
-        logging.info("arduino rebooted")
+        logger.info("arduino rebooted")
 
     def search_port(self, func):
         n = 2
@@ -223,12 +242,12 @@ class ardclick:
                 except Exception as e: 
                     s = str(e)
                     if not "he system cannot find the file specified" in s:
-                        logging.info(e)
+                        logger.info(e)
                     n+=1
-                #logging.info(e)
+                #logger.info(e)
                     if n == 100:
-                        logging.info("arduino port not found")
-                        logging.info("arduino port not found")
+                        logger.info("arduino port not found")
+                        logger.info("arduino port not found")
                         sys.exit()
         else:
             func(self.port)
@@ -243,14 +262,14 @@ class ardclick:
     def deinit(self):
         self.ard.close()
         if self.ard.closed:
-            logging.info("Connection is still open")
+            logger.info("Connection is still open")
         else:
-            logging.info("Connection closed")
+            logger.info("Connection closed")
 
     def change_delay_between(self, new_delay):
         self.serial_write(change_delay_between)
         self.serial_write(new_delay)
-        logging.info(f"new delay set to {new_delay}")
+        logger.info(f"new delay set to {new_delay}")
 
         
 
@@ -265,7 +284,7 @@ class ardclick:
 
             if data != bytes_:
                 print("Warning serial bytes_:", bytes_, " data: ", data)
-                logging.debug(f"Warning serial bytes_: {bytes_} data: {data}")
+                logger.debug(f"Warning serial bytes_: {bytes_} data: {data}")
                 return -1
                 
     def serial_write(self, n):
@@ -275,7 +294,7 @@ class ardclick:
 
 
     def write_mouse_coor(self, point, x_of=0, y_of=0):
-        logging.debug(f"{self.log} moving mouse and click {point}, {x_of}, {y_of}") 
+        logger.debug(f"{self.log} moving mouse and click {point}, {x_of}, {y_of}") 
         with mutexserial:
             x = point[0]+ x_of 
             y = point[1]+ y_of
@@ -283,7 +302,7 @@ class ardclick:
             self.serial_write(y)
 
     def write_mouse_coor_new(self, point, x_of=0, y_of=0):
-        logging.debug(f"{self.log} moving mouse and left click {point}, {x_of}, {y_of}") 
+        logger.debug(f"{self.log} moving mouse and left click {point}, {x_of}, {y_of}") 
         with mutexserial:
             x = point[0]+ x_of
             y = point[1]+ y_of
@@ -295,7 +314,7 @@ class ardclick:
             assert(ret == b'c')
 
     def write_mouse_coor_right(self, point, x_of = 0, y_of = 0):
-        logging.debug(f"{self.log} moving mouse and right click {point}, {x_of}, {y_of}") 
+        logger.debug(f"{self.log} moving mouse and right click {point}, {x_of}, {y_of}") 
         with mutexserial:
             x = point[0]+ x_of
             y = point[1]+ y_of
@@ -307,7 +326,7 @@ class ardclick:
             assert(ret == b'c')
             
     def write_custom(self, custom_code, values):
-        #logging.debug(f"{self.log} sending custom command {custom_code}, {values}") 
+        #logger.debug(f"{self.log} sending custom command {custom_code}, {values}") 
         with mutexserial:
             self.serial_write(custom_code)
             self.serial_write(custom_code)
@@ -343,7 +362,7 @@ class ardclick:
 
     def mouse_move(self, point, x_of=0, y_of=0, print=1):
         if print:
-            logging.debug(f"{self.log} moving mouse {point}, {x_of}, {y_of}") 
+            logger.debug(f"{self.log} moving mouse {point}, {x_of}, {y_of}") 
         with mutexserial:
             x = point[0]+ x_of
             y = point[1]+ y_of
@@ -361,11 +380,11 @@ class ardclick:
             data = data[:ret]
             if data != string.decode("UTF-8"):
                 print("Warning serial string:", string, " data: ", data)
-                logging.debug(f"Warning serial string: {string} data: {data}")
+                logger.debug(f"Warning serial string: {string} data: {data}")
                 
 
     def write_string(self, string, c):
-        logging.debug(f"{self.log} writing string {string}") 
+        logger.debug(f"{self.log} writing string {string}") 
         if c:  byte_code = write_string2_byte_code
         else: byte_code = write_string_byte_code
         #with mutex:
@@ -379,7 +398,7 @@ class ardclick:
 
 
     def press_key(self, key):
-        logging.debug(f"{self.log} pressing key {key[1]}") 
+        logger.debug(f"{self.log} pressing key {key[1]}") 
         with mutexserial:
             self.serial_write2(press_key_byte_code)
             time.sleep(0.1)
@@ -445,8 +464,8 @@ class ardclick:
         for x in range(2):
             self.mouse_move((end_x, end_y))
             pos = pyautogui.position()
-            logging.info(pos)
-        #logging.info(f"dur {duration} steps {num_steps}")
+            logger.debug(pos)
+        #logger.info(f"dur {duration} steps {num_steps}")
         if not no_click:
             if not right_click:
                 self.write_mouse_coor_new((end_x, end_y))
