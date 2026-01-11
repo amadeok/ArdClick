@@ -58,7 +58,7 @@ left_click_byte_code = left_click.to_bytes(2, 'little', signed=False)
 change_delay_between =  30008
 change_delay_between_byte_code = change_delay_between.to_bytes(2, 'little', signed=False)
 setBoardMode = 40009
-
+panic_code = 40019
            
 press_left_click  =40013
 release_left_click = 40014
@@ -271,7 +271,9 @@ class ardclick:
         self.serial_write(new_delay)
         logger.info(f"new delay set to {new_delay}")
 
-        
+    def panic(self):
+        self.serial_write(panic_code)
+        logger.info(f"Panic code sent to arduino")
 
     def serial_write2(self, bytes_):
         with mutexserial2:
@@ -499,7 +501,8 @@ if __name__ == "__main__":
     
     # a.mouse_move((2000 , 2000))
     a.write_mouse_coor_new((1000, 1000))
-
+    a.panic()
+    time.sleep(1)
     # a.write_string("hello", False)
 
     #                 a.press_key(key.m)
