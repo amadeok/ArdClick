@@ -1,6 +1,6 @@
 from concurrent.futures import thread
 import math
-from regex import T
+
 import os, sys, time, argparse, serial, pyautogui, threading, random
 import logging
 from PIL import Image
