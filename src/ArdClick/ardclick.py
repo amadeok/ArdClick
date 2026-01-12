@@ -1,4 +1,6 @@
+from concurrent.futures import thread
 import math
+from regex import T
 import os, sys, time, argparse, serial, pyautogui, threading, random
 import logging
 from PIL import Image
@@ -6,6 +8,8 @@ import pytweening
 
 
 import logging
+
+from sympy import false
 
 # Get the PIL logger
 pil_logger = logging.getLogger('PIL')
@@ -59,7 +63,8 @@ change_delay_between =  30008
 change_delay_between_byte_code = change_delay_between.to_bytes(2, 'little', signed=False)
 setBoardMode = 40009
 panic_code = 40019
-           
+unpanic_code = 40020
+
 press_left_click  =40013
 release_left_click = 40014
 press_right_click=40015
@@ -135,6 +140,7 @@ class ardclick:
         self.port = port
         self.baudrate = baudrate
         self.sl_int = sl_int
+        self.panic_mode = false
     
     def empty_read_buffer(self):
         count = 0
@@ -267,14 +273,26 @@ class ardclick:
             logger.info("Connection closed")
 
     def change_delay_between(self, new_delay):
-        self.serial_write(change_delay_between)
-        self.serial_write(new_delay)
-        logger.info(f"new delay set to {new_delay}")
+        with mutexserial:
+            self.serial_write(change_delay_between)
+            self.serial_write(new_delay)
+            logger.info(f"new delay set to {new_delay}")
 
     def panic(self):
-        self.serial_write(panic_code)
-        logger.info(f"Panic code sent to arduino")
+        with mutexserial:
+            self.serial_write(panic_code)
+            self.serial_write(panic_code)
+            logger.info(f"Panic code sent to arduino")
+            self.panic_mode  = True
 
+    def unpanic(self):
+        with mutexserial:
+            
+            self.serial_write(unpanic_code)
+            self.serial_write(unpanic_code)
+            logger.info(f"Unpanic code sent to arduino")
+            self.panic_mode  = False
+        
     def serial_write2(self, bytes_):
         with mutexserial2:
             size = len(bytes_)
@@ -498,10 +516,17 @@ if __name__ == "__main__":
     
     a.set_board_mode(a.boardModeEnum.mouseKeyboard.value)
     # a.change_delay_between(50) #250ms for click
-    
-    # a.mouse_move((2000 , 2000))
+
+    # a.mouse_move((2000 , 2000))                 
     a.write_mouse_coor_new((1000, 1000))
     a.panic()
+    def task():
+        for x in range(200):
+            a.mouse_move((1000+x, 1000))
+    threading.Thread(target=task, daemon=True).start()
+    time.sleep(1.01)
+    a.unpanic()
+
     time.sleep(1)
     # a.write_string("hello", False)
 
